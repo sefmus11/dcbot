@@ -77,26 +77,6 @@ async function askGemini(question, historyText) {
   return answer.trim();
 }
 
-async function handleAIQuestion(message, question, settings) {
-  if (settings.bakim) {
-    return message.reply("🔧 Şu anda bakımdayım, birazdan döneceğim!");
-  }
-  await message.channel.sendTyping();
-  const history = settings.aiHistory?.[message.author.id] || "";
-
-  try {
-    const answer = await askGemini(question, history);
-    const newHistory = `Soru: ${question} - Cevap: ${answer}`;
-    updateGuildSettings(message.guild.id, {
-      aiHistory: { ...(settings.aiHistory || {}), [message.author.id]: newHistory },
-    });
-    await message.reply(answer);
-  } catch (err) {
-    console.error("Gemini hatası:", err);
-    await message.reply(`❌ Hata oluştu: ${err.message}`);
-  }
-}
-
 // ---------- komutlar ----------
 // Her komut: async (message, args, settings) => { ... }
 
@@ -122,11 +102,9 @@ const commands = {
         { name: `${p}avatar [@kullanıcı]`, value: "Profil fotoğrafını gösterir" },
         { name: `${p}userinfo [@kullanıcı]`, value: "Kullanıcı bilgilerini gösterir" },
         { name: `${p}serverinfo`, value: "Sunucu bilgilerini gösterir" },
-        { name: `${p}sor <soru>`, value: "Yapay zeka asistanına soru sorar" },
+        { name: `${p}sor <soru>`, value: "NoveraMC yapay zeka asistanına soru sorar" },
         { name: `${p}bakım <aç|kapa>`, value: "AI asistanını bakım moduna alır/çıkarır" },
-        { name: `${p}durum <metin>`, value: "Botun aktivite durumunu değiştirir" },
-        { name: `${p}başla`, value: "Bu kanalda serbest AI sohbet modunu açar (komutsuz mesajlara da cevap verir)" },
-        { name: `${p}durdur`, value: "Bu kanalda AI sohbet modunu kapatır" }
+        { name: `${p}durum <metin>`, value: "Botun aktivite durumunu değiştirir" }
       );
     await message.channel.send({ embeds: [embed] });
   },
@@ -344,11 +322,28 @@ const commands = {
   },
 
   async sor(message, args, settings) {
+    if (settings.bakim) {
+      return message.reply("🔧 Şu anda bakımdayım, birazdan döneceğim!");
+    }
     const question = args.join(" ");
     if (!question) {
       return message.reply("❌ Lütfen bir soru yazın! Örnek: `sor nasılsın`");
     }
-    await handleAIQuestion(message, question, settings);
+
+    await message.channel.sendTyping();
+    const history = settings.aiHistory?.[message.author.id] || "";
+
+    try {
+      const answer = await askGemini(question, history);
+      const newHistory = `Soru: ${question} - Cevap: ${answer}`;
+      updateGuildSettings(message.guild.id, {
+        aiHistory: { ...(settings.aiHistory || {}), [message.author.id]: newHistory },
+      });
+      await message.reply(`🤖 **Novera AI:** ${answer}`);
+    } catch (err) {
+      console.error("Gemini hatası:", err);
+      await message.reply(`❌ Hata oluştu: ${err.message}`);
+    }
   },
 
   async bakım(message, args) {
@@ -372,25 +367,6 @@ const commands = {
     client.user.setActivity(text, { type: ActivityType.Watching });
     await message.reply(`✅ Bot durumu güncellendi: "${text}" (tüm sunucularda geçerli, botun tekli bir durumu vardır)`);
   },
-
-  async başla(message, args, settings) {
-    if (!hasPerm(message.member, PermissionsBitField.Flags.ManageGuild)) {
-      return message.reply("Bu komutu kullanmak için **Sunucuyu Yönet** yetkin olmalı.");
-    }
-    const channels = new Set(settings.aiChannels || []);
-    channels.add(message.channel.id);
-    updateGuildSettings(message.guild.id, { aiChannels: [...channels] });
-    await message.reply("✅ Bu kanalda yapay zeka sohbet modu açık. Artık komutsuz yazdığın her mesaja cevap vereceğim.");
-  },
-
-  async durdur(message, args, settings) {
-    if (!hasPerm(message.member, PermissionsBitField.Flags.ManageGuild)) {
-      return message.reply("Bu komutu kullanmak için **Sunucuyu Yönet** yetkin olmalı.");
-    }
-    const channels = (settings.aiChannels || []).filter((id) => id !== message.channel.id);
-    updateGuildSettings(message.guild.id, { aiChannels: channels });
-    await message.reply("🛑 Bu kanalda yapay zeka sohbet modu kapatıldı.");
-  },
 };
 
 // ---------- olaylar ----------
@@ -409,25 +385,17 @@ client.on("messageCreate", async (message) => {
   const settings = getGuildSettings(message.guild.id);
   const prefix = settings.prefix;
 
-  if (message.content.toLowerCase().startsWith(prefix.toLowerCase())) {
-    const args = message.content.slice(prefix.length).trim().split(/\s+/);
-    const commandName = args.shift()?.toLowerCase();
-    if (!commandName || !commands[commandName]) return;
+  if (!message.content.toLowerCase().startsWith(prefix.toLowerCase())) return;
 
-    try {
-      await commands[commandName](message, args, settings);
-    } catch (err) {
-      console.error(`"${commandName}" komutunda hata:`, err);
-      message.reply("⚠️ Komut çalıştırılırken bir hata oluştu.").catch(() => {});
-    }
-    return;
-  }
+  const args = message.content.slice(prefix.length).trim().split(/\s+/);
+  const commandName = args.shift()?.toLowerCase();
+  if (!commandName || !commands[commandName]) return;
 
-  // Serbest yapay zeka sohbet modu ("!başla" ile açılan kanallarda)
-  if (settings.aiChannels?.includes(message.channel.id) && message.content.trim()) {
-    handleAIQuestion(message, message.content.trim(), settings).catch((err) => {
-      console.error("AI sohbet hatası:", err);
-    });
+  try {
+    await commands[commandName](message, args, settings);
+  } catch (err) {
+    console.error(`"${commandName}" komutunda hata:`, err);
+    message.reply("⚠️ Komut çalıştırılırken bir hata oluştu.").catch(() => {});
   }
 });
 
