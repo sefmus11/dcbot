@@ -5,6 +5,7 @@ const {
   Partials,
   EmbedBuilder,
   PermissionsBitField,
+  ActivityType,
 } = require("discord.js");
 const { getGuildSettings, updateGuildSettings } = require("./storage");
 
@@ -47,6 +48,35 @@ function hasPerm(member, permission) {
   return member.permissions.has(permission);
 }
 
+const AI_SYSTEM_PROMPT =
+  "Sen yardımsever, kısa ve net cevaplar veren bir Discord asistanısın. Türkçe cevap ver, 1-3 cümle ile sınırlı tut.";
+
+async function askGemini(question, historyText) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY ayarlanmamış");
+
+  const prompt = `${AI_SYSTEM_PROMPT}\nÖnceki konuşma: ${historyText || "yok"}\nYeni soru: ${question}`;
+
+  const res = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    }
+  );
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const data = await res.json();
+  const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!answer) throw new Error("Boş yanıt döndü");
+  return answer.trim();
+}
+
 // ---------- komutlar ----------
 // Her komut: async (message, args, settings) => { ... }
 
@@ -71,7 +101,10 @@ const commands = {
         { name: `${p}welcome <#kanal>`, value: "Hoşgeldin mesajlarının gönderileceği kanalı ayarlar" },
         { name: `${p}avatar [@kullanıcı]`, value: "Profil fotoğrafını gösterir" },
         { name: `${p}userinfo [@kullanıcı]`, value: "Kullanıcı bilgilerini gösterir" },
-        { name: `${p}serverinfo`, value: "Sunucu bilgilerini gösterir" }
+        { name: `${p}serverinfo`, value: "Sunucu bilgilerini gösterir" },
+        { name: `${p}sor <soru>`, value: "NoveraMC yapay zeka asistanına soru sorar" },
+        { name: `${p}bakım <aç|kapa>`, value: "AI asistanını bakım moduna alır/çıkarır" },
+        { name: `${p}durum <metin>`, value: "Botun aktivite durumunu değiştirir" }
       );
     await message.channel.send({ embeds: [embed] });
   },
@@ -287,12 +320,63 @@ const commands = {
       );
     await message.channel.send({ embeds: [embed] });
   },
+
+  async sor(message, args, settings) {
+    if (settings.bakim) {
+      return message.reply("🔧 Şu anda bakımdayım, birazdan döneceğim!");
+    }
+    const question = args.join(" ");
+    if (!question) {
+      return message.reply("❌ Lütfen bir soru yazın! Örnek: `sor nasılsın`");
+    }
+
+    await message.channel.sendTyping();
+    const history = settings.aiHistory?.[message.author.id] || "";
+
+    try {
+      const answer = await askGemini(question, history);
+      const newHistory = `Soru: ${question} - Cevap: ${answer}`;
+      updateGuildSettings(message.guild.id, {
+        aiHistory: { ...(settings.aiHistory || {}), [message.author.id]: newHistory },
+      });
+      await message.reply(`🤖 **Novera AI:** ${answer}`);
+    } catch (err) {
+      console.error("Gemini hatası:", err);
+      await message.reply(`❌ Hata oluştu: ${err.message}`);
+    }
+  },
+
+  async bakım(message, args) {
+    if (!hasPerm(message.member, PermissionsBitField.Flags.ManageGuild)) {
+      return message.reply("Bu komutu kullanmak için **Sunucuyu Yönet** yetkin olmalı.");
+    }
+    const mode = args[0]?.toLowerCase();
+    if (mode !== "aç" && mode !== "kapa") {
+      return message.reply("Kullanım: `bakım aç` veya `bakım kapa`");
+    }
+    updateGuildSettings(message.guild.id, { bakim: mode === "aç" });
+    await message.reply(mode === "aç" ? "🔧 Bakım modu açıldı." : "✅ Bakım modu kapatıldı.");
+  },
+
+  async durum(message, args) {
+    if (!hasPerm(message.member, PermissionsBitField.Flags.ManageGuild)) {
+      return message.reply("Bu komutu kullanmak için **Sunucuyu Yönet** yetkin olmalı.");
+    }
+    const text = args.join(" ");
+    if (!text) return message.reply("Kullanım: `durum <yeni durum metni>`");
+    client.user.setActivity(text, { type: ActivityType.Watching });
+    await message.reply(`✅ Bot durumu güncellendi: "${text}" (tüm sunucularda geçerli, botun tekli bir durumu vardır)`);
+  },
 };
 
 // ---------- olaylar ----------
 
 client.once("ready", () => {
   console.log(`Bot giriş yaptı: ${client.user.tag}`);
+  client.user.setPresence({
+    activities: [{ name: "noveramc.aternos.me", type: ActivityType.Watching }],
+    status: "online",
+  });
 });
 
 client.on("messageCreate", async (message) => {

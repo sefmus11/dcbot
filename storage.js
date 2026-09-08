@@ -18,6 +18,8 @@ function saveData(data) {
 const DEFAULTS = {
   prefix: "!",
   welcomeChannelId: null,
+  bakim: false,
+  aiHistory: {},
 };
 
 function getGuildSettings(guildId) {
