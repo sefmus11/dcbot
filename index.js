@@ -356,7 +356,7 @@ const commands = {
       updateGuildSettings(message.guild.id, {
         aiHistory: { ...(settings.aiHistory || {}), [message.author.id]: newHistory },
       });
-      await message.reply(`🤖 **Novera AI:** ${answer}`);
+      await message.reply( ${answer}`);
     } catch (err) {
       console.error("Gemini hatası:", err);
       await message.reply(`❌ Hata oluştu: ${err.message}`);
@@ -396,7 +396,7 @@ Object.assign(commands, huntCommands);
 client.once("ready", () => {
   console.log(`Bot giriş yaptı: ${client.user.tag}`);
   client.user.setPresence({
-    activities: [{ name: "noveramc.aternos.me", type: ActivityType.Watching }],
+    activities: [{ name: "dev by @sadadam31", type: ActivityType.Watching }],
     status: "online",
   });
   startLotteryScheduler(client);
