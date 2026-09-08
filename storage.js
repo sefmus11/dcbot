@@ -20,6 +20,7 @@ const DEFAULTS = {
   welcomeChannelId: null,
   bakim: false,
   aiHistory: {},
+  aiChannels: [],
 };
 
 function getGuildSettings(guildId) {
