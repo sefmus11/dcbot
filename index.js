@@ -356,7 +356,7 @@ const commands = {
       updateGuildSettings(message.guild.id, {
         aiHistory: { ...(settings.aiHistory || {}), [message.author.id]: newHistory },
       });
-      await message.reply( ${answer}`);
+      await message.reply( `${answer}`);
     } catch (err) {
       console.error("Gemini hatası:", err);
       await message.reply(`❌ Hata oluştu: ${err.message}`);
