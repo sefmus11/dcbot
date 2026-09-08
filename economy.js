@@ -541,4 +541,8 @@ module.exports = {
     loto: piyango,
   },
   startLotteryScheduler,
+  // Diğer sistemlerin (örn. hunt.js) bakiyeye erişebilmesi için dışa açıyoruz
+  getUser,
+  updateBalance,
+  formatMoney,
 };
