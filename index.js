@@ -9,6 +9,7 @@ const {
 } = require("discord.js");
 const { getGuildSettings, updateGuildSettings } = require("./storage");
 const { commands: economyCommands, startLotteryScheduler } = require("./economy");
+const { commands: huntCommands } = require("./hunt");
 
 const client = new Client({
   intents: [
@@ -112,7 +113,15 @@ const commands = {
         { name: `${p}zar <miktar> <tek/cift/1-6>`, value: "Zar oyunu" },
         { name: `${p}slot <miktar>`, value: "Slot makinesi" },
         { name: `${p}blackjack <miktar>`, value: "21 oyunu" },
-        { name: `${p}piyango`, value: "Piyango sistemi (`piyango al <adet>` ile bilet al)" }
+        { name: `${p}piyango`, value: "Piyango sistemi (`piyango al <adet>` ile bilet al)" },
+        { name: `${p}avla`, value: "Av yaparak rastgele hayvan yakalar (30sn bekleme)" },
+        { name: `${p}hayvanlarim`, value: "Avladığın hayvanları gösterir" },
+        { name: `${p}sat <hayvan> <adet|hepsi>`, value: "Hayvan satarak para kazanır" },
+        { name: `${p}market`, value: "Gem ve kasa satın alma dükkanı" },
+        { name: `${p}satinal <ürün>`, value: "Market'ten ürün satın alır" },
+        { name: `${p}envanter`, value: "Gem ve kasalarını gösterir" },
+        { name: `${p}gemtak <gem>`, value: "Nadir hayvan şansını artıran gem takar" },
+        { name: `${p}kasaac <adet>`, value: "Av kasalarını açıp ödül kazanır" }
       );
     await message.channel.send({ embeds: [embed] });
   },
@@ -379,6 +388,8 @@ const commands = {
 
 // Para, daily, blackjack, coinflip, slot, zar ve piyango komutlarını ekliyor.
 Object.assign(commands, economyCommands);
+// Avla, hayvanlarim, sat, market, satinal, envanter, gemtak, gemcikar, kasaac komutlarını ekliyor.
+Object.assign(commands, huntCommands);
 
 // ---------- olaylar ----------
 
