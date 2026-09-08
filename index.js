@@ -8,6 +8,7 @@ const {
   ActivityType,
 } = require("discord.js");
 const { getGuildSettings, updateGuildSettings } = require("./storage");
+const { commands: economyCommands, startLotteryScheduler } = require("./economy");
 
 const client = new Client({
   intents: [
@@ -104,7 +105,14 @@ const commands = {
         { name: `${p}serverinfo`, value: "Sunucu bilgilerini gösterir" },
         { name: `${p}sor <soru>`, value: "NoveraMC yapay zeka asistanına soru sorar" },
         { name: `${p}bakım <aç|kapa>`, value: "AI asistanını bakım moduna alır/çıkarır" },
-        { name: `${p}durum <metin>`, value: "Botun aktivite durumunu değiştirir" }
+        { name: `${p}durum <metin>`, value: "Botun aktivite durumunu değiştirir" },
+        { name: `${p}para [@kullanıcı]`, value: "Bakiyeni gösterir" },
+        { name: `${p}daily`, value: "Günlük ödülünü alır" },
+        { name: `${p}coinflip <miktar> <yazi/tura>`, value: "Yazı tura oyunu" },
+        { name: `${p}zar <miktar> <tek/cift/1-6>`, value: "Zar oyunu" },
+        { name: `${p}slot <miktar>`, value: "Slot makinesi" },
+        { name: `${p}blackjack <miktar>`, value: "21 oyunu" },
+        { name: `${p}piyango`, value: "Piyango sistemi (`piyango al <adet>` ile bilet al)" }
       );
     await message.channel.send({ embeds: [embed] });
   },
@@ -369,6 +377,9 @@ const commands = {
   },
 };
 
+// Para, daily, blackjack, coinflip, slot, zar ve piyango komutlarını ekliyor.
+Object.assign(commands, economyCommands);
+
 // ---------- olaylar ----------
 
 client.once("ready", () => {
@@ -377,6 +388,7 @@ client.once("ready", () => {
     activities: [{ name: "noveramc.aternos.me", type: ActivityType.Watching }],
     status: "online",
   });
+  startLotteryScheduler(client);
 });
 
 client.on("messageCreate", async (message) => {
