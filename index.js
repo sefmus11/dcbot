@@ -90,38 +90,71 @@ const commands = {
       .setDescription(`Aktif prefix: \`${p}\``)
       .setColor(COLOR)
       .addFields(
-        { name: `${p}menu`, value: "Bu menüyü gösterir" },
-        { name: `${p}prefix <yeni>`, value: "Sunucu prefix'ini değiştirir (Sunucuyu Yönet yetkisi gerekir)" },
-        { name: `${p}çekiliş <süre> <ödül>`, value: "Reaksiyonlu çekiliş başlatır. Örn: `10m Nitro`" },
-        { name: `${p}ban <@kullanıcı> [sebep]`, value: "Kullanıcıyı sunucudan yasaklar" },
-        { name: `${p}unban <kullanıcı ID>`, value: "Yasağı kaldırır" },
-        { name: `${p}kick <@kullanıcı> [sebep]`, value: "Kullanıcıyı sunucudan atar" },
-        { name: `${p}mute <@kullanıcı> <süre> [sebep]`, value: "Kullanıcıyı susturur. Örn: `10m`" },
-        { name: `${p}unmute <@kullanıcı>`, value: "Susturmayı kaldırır" },
-        { name: `${p}clear <sayı>`, value: "Belirtilen sayıda mesajı siler (maks 100)" },
-        { name: `${p}sohbet <aç|kapa>`, value: "Bulunduğun kanalda herkesin yazmasını açar/kapatır" },
-        { name: `${p}welcome <#kanal>`, value: "Hoşgeldin mesajlarının gönderileceği kanalı ayarlar" },
-        { name: `${p}avatar [@kullanıcı]`, value: "Profil fotoğrafını gösterir" },
-        { name: `${p}userinfo [@kullanıcı]`, value: "Kullanıcı bilgilerini gösterir" },
-        { name: `${p}serverinfo`, value: "Sunucu bilgilerini gösterir" },
-        { name: `${p}sor <soru>`, value: "NoveraMC yapay zeka asistanına soru sorar" },
-        { name: `${p}bakım <aç|kapa>`, value: "AI asistanını bakım moduna alır/çıkarır" },
-        { name: `${p}durum <metin>`, value: "Botun aktivite durumunu değiştirir" },
-        { name: `${p}para [@kullanıcı]`, value: "Bakiyeni gösterir" },
-        { name: `${p}daily`, value: "Günlük ödülünü alır" },
-        { name: `${p}coinflip <miktar> <yazi/tura>`, value: "Yazı tura oyunu" },
-        { name: `${p}zar <miktar> <tek/cift/1-6>`, value: "Zar oyunu" },
-        { name: `${p}slot <miktar>`, value: "Slot makinesi" },
-        { name: `${p}blackjack <miktar>`, value: "21 oyunu" },
-        { name: `${p}piyango`, value: "Piyango sistemi (`piyango al <adet>` ile bilet al)" },
-        { name: `${p}avla`, value: "Av yaparak rastgele hayvan yakalar (30sn bekleme)" },
-        { name: `${p}hayvanlarim`, value: "Avladığın hayvanları gösterir" },
-        { name: `${p}sat <hayvan> <adet|hepsi>`, value: "Hayvan satarak para kazanır" },
-        { name: `${p}market`, value: "Gem ve kasa satın alma dükkanı" },
-        { name: `${p}satinal <ürün>`, value: "Market'ten ürün satın alır" },
-        { name: `${p}envanter`, value: "Gem ve kasalarını gösterir" },
-        { name: `${p}gemtak <gem>`, value: "Nadir hayvan şansını artıran gem takar" },
-        { name: `${p}kasaac <adet>`, value: "Av kasalarını açıp ödül kazanır" }
+        {
+          name: "⚙️ Genel",
+          value: [
+            `\`${p}menu\` — Bu menüyü gösterir`,
+            `\`${p}prefix <yeni>\` — Sunucu prefix'ini değiştirir`,
+            `\`${p}durum <metin>\` — Botun aktivite durumunu değiştirir`,
+          ].join("\n"),
+        },
+        {
+          name: "🛡️ Moderasyon",
+          value: [
+            `\`${p}ban <@kullanıcı> [sebep]\` — Yasaklar`,
+            `\`${p}unban <ID>\` — Yasağı kaldırır`,
+            `\`${p}kick <@kullanıcı> [sebep]\` — Atar`,
+            `\`${p}mute <@kullanıcı> <süre> [sebep]\` — Susturur`,
+            `\`${p}unmute <@kullanıcı>\` — Susturmayı kaldırır`,
+            `\`${p}clear <sayı>\` — Mesaj siler (maks 100)`,
+            `\`${p}sohbet <aç|kapa>\` — Kanalı kilitler/açar`,
+            `\`${p}welcome <#kanal>\` — Hoşgeldin kanalını ayarlar`,
+          ].join("\n"),
+        },
+        {
+          name: "ℹ️ Bilgi",
+          value: [
+            `\`${p}avatar [@kullanıcı]\` — Profil fotoğrafı`,
+            `\`${p}userinfo [@kullanıcı]\` — Kullanıcı bilgisi`,
+            `\`${p}serverinfo\` — Sunucu bilgisi`,
+          ].join("\n"),
+        },
+        {
+          name: "🤖 Yapay Zeka",
+          value: [
+            `\`${p}sor <soru>\` — NoveraMC AI'ya soru sorar`,
+            `\`${p}bakım <aç|kapa>\` — AI bakım modu`,
+          ].join("\n"),
+        },
+        {
+          name: "🎉 Çekiliş",
+          value: `\`${p}çekiliş <süre> <ödül>\` — Örn: \`10m Nitro\``,
+        },
+        {
+          name: "💰 Ekonomi",
+          value: [
+            `\`${p}para [@kullanıcı]\` — Bakiye gösterir`,
+            `\`${p}daily\` — Günlük ödül alır`,
+            `\`${p}coinflip <miktar> <yazi/tura>\` — Yazı tura`,
+            `\`${p}zar <miktar> <tek/cift/1-6>\` — Zar oyunu`,
+            `\`${p}slot <miktar>\` — Slot makinesi`,
+            `\`${p}blackjack <miktar>\` — 21 oyunu`,
+            `\`${p}piyango [al <adet>]\` — Piyango sistemi`,
+          ].join("\n"),
+        },
+        {
+          name: "🏹 Avcılık",
+          value: [
+            `\`${p}avla\` — Rastgele hayvan avlar (30sn)`,
+            `\`${p}hayvanlarim\` — Hayvanlarını gösterir`,
+            `\`${p}sat <hayvan> <adet|hepsi>\` — Hayvan satar`,
+            `\`${p}market\` — Gem/kasa dükkanı`,
+            `\`${p}satinal <ürün>\` — Ürün satın alır`,
+            `\`${p}envanter\` — Gem/kasalarını gösterir`,
+            `\`${p}gemtak <gem>\` — Gem takar`,
+            `\`${p}kasaac <adet>\` — Kasa açar`,
+          ].join("\n"),
+        }
       );
     await message.channel.send({ embeds: [embed] });
   },
@@ -356,7 +389,7 @@ const commands = {
       updateGuildSettings(message.guild.id, {
         aiHistory: { ...(settings.aiHistory || {}), [message.author.id]: newHistory },
       });
-      await message.reply( `${answer}`);
+      await message.reply(`🤖 **Novera AI:** ${answer}`);
     } catch (err) {
       console.error("Gemini hatası:", err);
       await message.reply(`❌ Hata oluştu: ${err.message}`);
@@ -396,7 +429,7 @@ Object.assign(commands, huntCommands);
 client.once("ready", () => {
   console.log(`Bot giriş yaptı: ${client.user.tag}`);
   client.user.setPresence({
-    activities: [{ name: "dev by @sadadam31", type: ActivityType.Watching }],
+    activities: [{ name: "noveramc.aternos.me", type: ActivityType.Watching }],
     status: "online",
   });
   startLotteryScheduler(client);
