@@ -84,8 +84,19 @@ function collectMining(userId) {
 }
 
 // ---------- PİYASA DALGALANMASI ----------
+// Sadece rastgele yüzdesel değişim kullanmak matematiksel olarak aşağı yönlü
+// bir kaymaya sebep olur (%7 düşüp %7 artmak seni başa döndürmez, hep eksi
+// kalırsın). Bunu engellemek için fiyatı hafifçe "ortalama" bir değere doğru
+// çeken bir güç ekliyoruz — fiyat düşünce yukarı, yükselince aşağı yönlü
+// hafif bir baskı oluşur. Yine de güçlü art arda şoklarla dip ya da zirve
+// bulunabilir, sadece sürekli tek yöne kaymaz.
 function updatePrice() {
-  const changePercent = (Math.random() * 2 - 1) * BTC_CONFIG.VOLATILITY; // -%18 ile +%18 arası
+  const anchor = BTC_CONFIG.BASE_PRICE;
+  const reversionStrength = 0.03; // ortalamaya çekilme gücü
+  const reversion = ((anchor - market.price) / anchor) * reversionStrength;
+  const randomShock = (Math.random() * 2 - 1) * BTC_CONFIG.VOLATILITY;
+
+  const changePercent = randomShock + reversion;
   let newPrice = market.price * (1 + changePercent);
   newPrice = Math.max(BTC_CONFIG.MIN_PRICE, Math.min(BTC_CONFIG.MAX_PRICE, newPrice));
 
