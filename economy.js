@@ -6,6 +6,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { DATA_DIR } = require("./dataDir");
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -26,9 +27,9 @@ const CONFIG = {
   CURRENCY_EMOJI: "💰",
 };
 
-// ---------- VERİTABANI (JSON dosya tabanlı, kendi dosyaları) ----------
-const DB_PATH = path.join(__dirname, "economy-data.json");
-const LOTTERY_PATH = path.join(__dirname, "lottery-data.json");
+// ---------- VERİTABANI (JSON dosya tabanlı, kalıcı diske yazılır) ----------
+const DB_PATH = path.join(DATA_DIR, "economy-data.json");
+const LOTTERY_PATH = path.join(DATA_DIR, "lottery-data.json");
 
 function loadData(filePath, defaultData) {
   if (!fs.existsSync(filePath)) {
