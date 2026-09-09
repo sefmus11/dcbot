@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const { EmbedBuilder } = require("discord.js");
 const { getUser, updateBalance, formatMoney } = require("./economy");
+const { DATA_DIR } = require("./dataDir");
 
 // ---------- AYARLAR ----------
 const BTC_CONFIG = {
@@ -31,8 +32,8 @@ const MINERS = [
 ];
 
 // ---------- VERİTABANI ----------
-const BTC_DATA_PATH = path.join(__dirname, "bitcoin-data.json");
-const BTC_MARKET_PATH = path.join(__dirname, "bitcoin-market.json");
+const BTC_DATA_PATH = path.join(DATA_DIR, "bitcoin-data.json");
+const BTC_MARKET_PATH = path.join(DATA_DIR, "bitcoin-market.json");
 
 function loadData(filePath, defaultData) {
   if (!fs.existsSync(filePath)) {
