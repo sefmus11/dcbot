@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { EmbedBuilder } = require("discord.js");
 const { getUser, updateBalance, formatMoney } = require("./economy");
+const { DATA_DIR } = require("./dataDir");
 
 const HUNT_COOLDOWN = 30 * 1000; // 30 saniye
 
@@ -41,7 +42,7 @@ const ITEMS = {
 };
 
 // ---------- VERİTABANI ----------
-const HUNT_PATH = path.join(__dirname, "hunt-data.json");
+const HUNT_PATH = path.join(DATA_DIR, "hunt-data.json");
 
 function loadHunt() {
   if (!fs.existsSync(HUNT_PATH)) {
@@ -324,6 +325,7 @@ module.exports = {
   commands: {
     avla,
     av: avla,
+    hunt: avla,
     hayvanlarim: hayvanlarim,
     zoo: hayvanlarim,
     sat,
