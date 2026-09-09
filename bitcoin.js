@@ -14,12 +14,12 @@ const { DATA_DIR } = require("./dataDir");
 // ---------- AYARLAR ----------
 const BTC_CONFIG = {
   BASE_PRICE: 50000,       // Başlangıç kuru (Para / BTC)
-  MIN_PRICE: 5000,         // Kur bu değerin altına düşemez
-  MAX_PRICE: 3000000,      // Kur bu değerin üstüne çıkamaz
-  UPDATE_INTERVAL: 5 * 60 * 1000, // 5 dakikada bir piyasa güncellenir
-  VOLATILITY: 0.18,        // Tek seferde en fazla %18 değişim
+  MIN_PRICE: 15000,        // Kur bu değerin altına düşemez
+  MAX_PRICE: 500000,       // Kur bu değerin üstüne çıkamaz
+  UPDATE_INTERVAL: 10 * 60 * 1000, // 10 dakikada bir piyasa güncellenir
+  VOLATILITY: 0.07,        // Tek seferde en fazla %7 değişim (gerçekçi seviye)
   HISTORY_LENGTH: 12,      // Son kaç fiyat saklansın
-  BIG_SWING_ANNOUNCE: 12,  // %12+ değişimlerde duyuru yapılsın
+  BIG_SWING_ANNOUNCE: 6,   // %6+ değişimlerde duyuru yapılsın
 };
 
 // ---------- MADENCİ KATALOĞU ----------
