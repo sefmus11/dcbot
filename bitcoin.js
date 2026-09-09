@@ -98,6 +98,17 @@ function updatePrice() {
 
   const changePercent = randomShock + reversion;
   let newPrice = market.price * (1 + changePercent);
+
+  // Taban/tavana sert yapışmayı önlemek için "yumuşak yansıtma":
+  // sınırı aşan kısmın bir kısmını geri içeri yansıtıyoruz, böylece fiyat
+  // hep aynı sabit sayıya (örn. tam 15.000) kilitlenip donmuş görünmez.
+  if (newPrice < BTC_CONFIG.MIN_PRICE) {
+    const overshoot = BTC_CONFIG.MIN_PRICE - newPrice;
+    newPrice = BTC_CONFIG.MIN_PRICE + overshoot * 0.4 + Math.random() * (BTC_CONFIG.MIN_PRICE * 0.02);
+  } else if (newPrice > BTC_CONFIG.MAX_PRICE) {
+    const overshoot = newPrice - BTC_CONFIG.MAX_PRICE;
+    newPrice = BTC_CONFIG.MAX_PRICE - overshoot * 0.4 - Math.random() * (BTC_CONFIG.MAX_PRICE * 0.02);
+  }
   newPrice = Math.max(BTC_CONFIG.MIN_PRICE, Math.min(BTC_CONFIG.MAX_PRICE, newPrice));
 
   market.price = Math.round(newPrice);
