@@ -74,7 +74,10 @@ function getUser(userId) {
 function updateBalance(userId, amount) {
   const user = getUser(userId);
   user.balance += amount;
-  if (user.balance < 0) user.balance = 0;
+  // Not: Bakiye burada 0'a sabitlenmiyor — Zeplin oyunundaki kaldıraçlı
+  // kayıplar kullanıcıyı borca (negatif bakiye) sokabilir. Diğer oyunlar
+  // zaten bahis miktarını bakiyeyle sınırlandırdığı için (validateBet)
+  // bu değişiklik onları etkilemez.
   saveUsers();
   return user.balance;
 }
@@ -117,11 +120,15 @@ function formatMoney(n) {
 async function para(message, args) {
   const target = message.mentions.users.first() || message.author;
   const user = getUser(target.id);
+  const inDebt = user.balance < 0;
 
   const embed = new EmbedBuilder()
-    .setColor("#2ecc71")
+    .setColor(inDebt ? "#e74c3c" : "#2ecc71")
     .setAuthor({ name: target.username, iconURL: target.displayAvatarURL() })
-    .setDescription(`${CONFIG.CURRENCY_EMOJI} Bakiye: **${user.balance.toLocaleString("tr-TR")}**`)
+    .setDescription(
+      `${CONFIG.CURRENCY_EMOJI} Bakiye: **${user.balance.toLocaleString("tr-TR")}**` +
+      (inDebt ? `\n⚠️ **Borçlusun!** Diğer oyunları oynamadan önce borcunu kapatmalısın.` : "")
+    )
     .addFields(
       { name: "Oynanan Oyun", value: `${user.stats.gamesPlayed}`, inline: true },
       { name: "Kazanılan", value: `${user.stats.won}`, inline: true },
@@ -129,6 +136,31 @@ async function para(message, args) {
     );
 
   await message.channel.send({ embeds: [embed] });
+}
+
+async function ver(message, args) {
+  const target = message.mentions.users.first();
+  if (!target) return message.reply("Kullanım: `ver @kullanıcı <miktar>`");
+  if (target.id === message.author.id) return message.reply("Kendine para gönderemezsin.");
+  if (target.bot) return message.reply("Bir bota para gönderemezsin.");
+
+  const amount = parseBet(args[1], getUser(message.author.id).balance);
+  if (!amount) return message.reply("Geçerli bir miktar gir. Kullanım: `ver @kullanıcı <miktar>`");
+
+  const sender = getUser(message.author.id);
+  if (sender.balance < amount) {
+    return message.reply(`Yeterli bakiyen yok! Bakiyen: ${formatMoney(sender.balance)}`);
+  }
+  if (amount < CONFIG.MIN_BET) {
+    return message.reply(`En az ${formatMoney(CONFIG.MIN_BET)} gönderebilirsin.`);
+  }
+
+  updateBalance(message.author.id, -amount);
+  updateBalance(target.id, amount);
+
+  await message.channel.send(
+    `✅ <@${message.author.id}> → <@${target.id}> **${formatMoney(amount)}** gönderdi!`
+  );
 }
 
 async function daily(message) {
@@ -540,10 +572,14 @@ module.exports = {
     blackjack,
     piyango,
     loto: piyango,
+    ver,
+    give: ver,
   },
   startLotteryScheduler,
-  // Diğer sistemlerin (örn. hunt.js) bakiyeye erişebilmesi için dışa açıyoruz
+  // Diğer sistemlerin (örn. hunt.js, bitcoin.js, crypto-games.js) bakiyeye
+  // erişebilmesi için dışa açıyoruz
   getUser,
   updateBalance,
   formatMoney,
+  MAX_BET: CONFIG.MAX_BET,
 };
