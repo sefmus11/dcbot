@@ -170,10 +170,11 @@ const commands = {
           ].join("\n"),
         },
         {
-          name: "🎰 Kripto Kumar (Yüksek Risk)",
+          name: "🎰 Kripto Kumar (BTC ile, Yüksek Risk)",
           value: [
-            `\`${p}zeplin <miktar> <kaldıraç>\` — Çarpan yükselir, istediğin an çek! Kaldıraçla ⚠️ **BORÇLANABİLİRSİN**`,
-            `\`${p}kripto <miktar> <bomba>\` — Maden tarlasında rug pull'lardan kaç, çarpanı büyüt`,
+            `\`${p}zeplin <BTC|hepsi> <kaldıraç>\` — Çarpan yükselir, istediğin an çek! Kaldıraçla BTC'n yetmeyen kısım Para'dan düşülür ⚠️ **PARA BORCUNA GİREBİLİRSİN**`,
+            `\`${p}kripto <BTC|hepsi> <bomba>\` — Maden tarlasında rug pull'lardan kaç, çarpanı büyüt`,
+            `Bu ikisi doğrudan **BTC deponla** oynanır — önce \`madenci\` ile BTC üretmelisin.`,
           ].join("\n"),
         }
       );
@@ -410,7 +411,7 @@ const commands = {
       updateGuildSettings(message.guild.id, {
         aiHistory: { ...(settings.aiHistory || {}), [message.author.id]: newHistory },
       });
-      await message.reply(`${answer}`);
+      await message.reply(`🤖 **Novera AI:** ${answer}`);
     } catch (err) {
       console.error("Gemini hatası:", err);
       await message.reply(`❌ Hata oluştu: ${err.message}`);
