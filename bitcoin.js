@@ -276,4 +276,8 @@ module.exports = {
     btcsat,
   },
   startPriceUpdater,
+  // crypto-games.js'in BTC deposuna ve güncel kura doğrudan erişebilmesi için dışa açıyoruz
+  getBtcUser,
+  saveBtc,
+  market,
 };
