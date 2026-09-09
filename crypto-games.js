@@ -1,19 +1,58 @@
 // ================== crypto-games.js ==================
-// Kripto temalı 2 yüksek riskli kumar oyunu:
+// Kripto temalı 2 yüksek riskli kumar oyunu — Para DEĞİL, doğrudan
+// BTC deponla oynanır. Kazanırsan deponda BTC birikir, kaybedersen
+// deponu kaybedersin. Zeplin'de kaldıraç kullanırsan ve patlarsa,
+// deponun sahip olduğundan FAZLA BTC kaybedip BTC BORCUNA girebilirsin
+// (negatif BTC bakiyesi).
 //
 // 1) ZEPLİN — Çarpan sürekli yükselir, istediğin an "İn" diyerek çekebilirsin.
-//    Kaldıraç seçersen kazanç da kayıp da katlanır — patlarsa ve kaldıraçla
-//    oynuyorsan bakiyen EKSİYE düşüp BORÇLANABİLİRSİN.
-//
-// 2) KRİPTO MADEN TARLASI — 4x4 kutucuklu bir alanda "rug pull" (bomba)
-//    kutucuklarından kaçarak ilerle, her güvenli kutucukta çarpan artar,
-//    istediğin an çekebilirsin. Bombaya basarsan bahsin tamamen gider.
+// 2) KRİPTO MADEN TARLASI — 4x4 kutucuklu alanda rug pull'lardan kaçarak
+//    ilerle, her güvenli kutucukta çarpan artar, istediğin an çekebilirsin.
 // ==================================================
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { getUser, updateBalance, formatMoney, MAX_BET } = require("./economy");
+const { getBtcUser, saveBtc, market } = require("./bitcoin");
+const { getUser, updateBalance, formatMoney } = require("./economy");
 
-const MIN_BET = 100;
+const MIN_BET_BTC = 0.000001;
+
+function formatBtc(n) {
+  return `${n.toFixed(6)} BTC`;
+}
+
+function parseBtcAmount(input, depo) {
+  if (!input) return null;
+  const lower = input.toLowerCase();
+  if (lower === "hepsi" || lower === "all") return depo;
+  const amount = parseFloat(input);
+  if (isNaN(amount) || amount <= 0) return null;
+  return amount;
+}
+
+// BTC kaybı depoyu aşarsa, aşan kısmı güncel kurdan Para'ya çevirip
+// Para bakiyesinden düşer. BTC deposu asla eksiye inmez (taban: 0),
+// borç varsa tamamen Para cinsinden oluşur.
+function handleBtcLoss(userId, lossBtc) {
+  const btcUser = getBtcUser(userId);
+  const fromDepo = Math.min(btcUser.depo, lossBtc);
+  const deficitBtc = lossBtc - fromDepo;
+
+  btcUser.depo -= fromDepo;
+  saveBtc();
+
+  let paraCost = 0;
+  if (deficitBtc > 0) {
+    paraCost = Math.round(deficitBtc * market.price);
+    updateBalance(userId, -paraCost);
+  }
+
+  return {
+    deficitBtc,
+    paraCost,
+    newDepo: btcUser.depo,
+    newBalance: getUser(userId).balance,
+  };
+}
 
 // ================== ZEPLİN ==================
 
@@ -31,30 +70,30 @@ function generateCrashPoint() {
 }
 
 async function zeplin(message, args) {
-  const user = getUser(message.author.id);
-
-  if (user.balance < 0) {
-    return message.reply("⚠️ Borçlusun! Önce `daily`, `avla` veya `madenci` ile borcunu kapatmalısın.");
-  }
-
-  const amount = parseInt((args[0] || "").replace(/\./g, "").replace(/,/g, ""), 10);
+  const btcUser = getBtcUser(message.author.id);
+  const betBtc = parseBtcAmount(args[0], btcUser.depo);
   const leverage = parseInt(args[1], 10) || 1;
 
-  if (!amount || amount <= 0) {
+  if (!betBtc) {
     return message.reply(
-      `Kullanım: \`zeplin <miktar> <kaldıraç>\`\n` +
+      `Kullanım: \`zeplin <BTC miktarı|hepsi> <kaldıraç>\` — Örn: \`zeplin 0.001 10\`\n` +
       `Kaldıraç seçenekleri: ${LEVERAGE_OPTIONS.join("x, ")}x\n` +
-      `⚠️ Kaldıraç kullanırsan ve zeplin patlarsa **bahis x kaldıraç** kadar kaybedersin — bu bakiyeni eksiye düşürüp seni BORÇLANDIRABİLİR!`
+      `Deponda: **${formatBtc(btcUser.depo)}**\n` +
+      `⚠️ Kaldıraç kullanırsan ve zeplin patlarsa **bahis x kaldıraç** kadar BTC kaybedersin. BTC'n yetmezse fark güncel kurdan Para'ya çevrilip bakiyenden düşülür — bu seni PARA BORCUNA sokabilir!`
     );
   }
-  if (amount < MIN_BET) return message.reply(`Minimum bahis **${MIN_BET.toLocaleString("tr-TR")}**.`);
-  if (amount > MAX_BET) return message.reply(`Maksimum bahis **${MAX_BET.toLocaleString("tr-TR")}**.`);
-  if (amount > user.balance) return message.reply(`Yeterli bakiyen yok! Bakiyen: ${formatMoney(user.balance)}`);
+  if (betBtc < MIN_BET_BTC) return message.reply(`Minimum bahis **${formatBtc(MIN_BET_BTC)}**.`);
   if (!LEVERAGE_OPTIONS.includes(leverage)) {
     return message.reply(`Geçersiz kaldıraç. Seçenekler: ${LEVERAGE_OPTIONS.join("x, ")}x`);
   }
+  if (btcUser.depo <= 0) {
+    return message.reply(`Deponda BTC yok (${formatBtc(btcUser.depo)}). \`madenci\` ile üretip \`madenci topla\` ile depona aktarabilirsin.`);
+  }
+  if (betBtc > btcUser.depo) {
+    return message.reply(`Yeterli BTC'n yok! Deponda: ${formatBtc(btcUser.depo)}`);
+  }
 
-  const maxLoss = amount * leverage;
+  const maxLoss = betBtc * leverage;
   const crashPoint = generateCrashPoint();
   let multiplier = 1.0;
   let resolved = false;
@@ -75,8 +114,8 @@ async function zeplin(message, args) {
       .setTitle(titles[state])
       .setDescription(
         `Çarpan: **${multiplier.toFixed(2)}x**\n` +
-        `Bahis: ${formatMoney(amount)} · Kaldıraç: **${leverage}x**\n` +
-        `Riskli kayıp: ${formatMoney(maxLoss)}` +
+        `Bahis: ${formatBtc(betBtc)} · Kaldıraç: **${leverage}x**\n` +
+        `Riskli kayıp: ${formatBtc(maxLoss)}` +
         (extra ? `\n\n${extra}` : "")
       );
   };
@@ -93,12 +132,14 @@ async function zeplin(message, args) {
     resolved = true;
     clearInterval(interval);
 
-    const profit = Math.floor(amount * leverage * (multiplier - 1));
-    updateBalance(message.author.id, profit);
+    const profit = betBtc * leverage * (multiplier - 1);
+    const u = getBtcUser(message.author.id);
+    u.depo += profit;
+    saveBtc();
 
     const embed = buildEmbed(
       "cashed",
-      `✅ **${multiplier.toFixed(2)}x**'te indin!\nKazanç: **+${formatMoney(profit)}**\nGüncel bakiye: **${getUser(message.author.id).balance.toLocaleString("tr-TR")}**`
+      `✅ **${multiplier.toFixed(2)}x**'te indin!\nKazanç: **+${formatBtc(profit)}**\nGüncel depo: **${formatBtc(u.depo)}**`
     );
 
     if (interaction) await interaction.update({ embeds: [embed], components: [] });
@@ -111,13 +152,19 @@ async function zeplin(message, args) {
     clearInterval(interval);
     collector.stop("crashed");
 
-    updateBalance(message.author.id, -maxLoss);
-    const finalBalance = getUser(message.author.id).balance;
-    const debtLine = finalBalance < 0 ? `\n💀 **BORÇLANDIN!** Bakiyen artık: **${finalBalance.toLocaleString("tr-TR")}**` : "";
+    const result = handleBtcLoss(message.author.id, maxLoss);
+
+    let extraLine = "";
+    if (result.deficitBtc > 0) {
+      extraLine += `\n⚠️ Deponda yeterli BTC yoktu — **${result.deficitBtc.toFixed(6)} BTC** değerindeki fark (~${formatMoney(result.paraCost)}) Para bakiyenden düşüldü.`;
+    }
+    if (result.newBalance < 0) {
+      extraLine += `\n💀 **PARA BORCUNA GİRDİN!** Bakiyen: **${formatMoney(result.newBalance)}**`;
+    }
 
     const embed = buildEmbed(
       "crashed",
-      `Zeplin **${crashPoint.toFixed(2)}x**'te patladı!\nKayıp: **-${formatMoney(maxLoss)}**${debtLine}`
+      `Zeplin **${crashPoint.toFixed(2)}x**'te patladı!\nKayıp: **-${formatBtc(maxLoss)}**${extraLine}\nGüncel depo: **${formatBtc(result.newDepo)}**`
     );
 
     await msg.edit({ embeds: [embed], components: [] }).catch(() => {});
@@ -170,27 +217,28 @@ function calcMultiplier(revealed, bombs) {
 }
 
 async function kripto(message, args) {
-  const user = getUser(message.author.id);
-
-  if (user.balance < 0) {
-    return message.reply("⚠️ Borçlusun! Önce `daily`, `avla` veya `madenci` ile borcunu kapatmalısın.");
-  }
-
-  const amount = parseInt((args[0] || "").replace(/\./g, "").replace(/,/g, ""), 10);
+  const btcUser = getBtcUser(message.author.id);
+  const betBtc = parseBtcAmount(args[0], btcUser.depo);
   const bombCount = parseInt(args[1], 10) || 3;
 
-  if (!amount || amount <= 0) {
+  if (!betBtc) {
     return message.reply(
-      `Kullanım: \`kripto <miktar> <bomba sayısı>\`\n` +
-      `Bomba sayısı 1-15 arası olabilir (varsayılan: 3). Ne kadar çok bomba, o kadar yüksek çarpan!`
+      `Kullanım: \`kripto <BTC miktarı|hepsi> <bomba sayısı>\` — Örn: \`kripto 0.0005 5\`\n` +
+      `Bomba sayısı 1-15 arası olabilir (varsayılan: 3). Ne kadar çok bomba, o kadar yüksek çarpan!\n` +
+      `Deponda: **${formatBtc(btcUser.depo)}**`
     );
   }
-  if (amount < MIN_BET) return message.reply(`Minimum bahis **${MIN_BET.toLocaleString("tr-TR")}**.`);
-  if (amount > MAX_BET) return message.reply(`Maksimum bahis **${MAX_BET.toLocaleString("tr-TR")}**.`);
-  if (amount > user.balance) return message.reply(`Yeterli bakiyen yok! Bakiyen: ${formatMoney(user.balance)}`);
+  if (betBtc < MIN_BET_BTC) return message.reply(`Minimum bahis **${formatBtc(MIN_BET_BTC)}**.`);
   if (bombCount < 1 || bombCount > 15) return message.reply("Bomba sayısı 1 ile 15 arasında olmalı.");
+  if (btcUser.depo <= 0) {
+    return message.reply(`Deponda BTC yok (${formatBtc(btcUser.depo)}). \`madenci\` ile üretip \`madenci topla\` ile depona aktarabilirsin.`);
+  }
+  if (betBtc > btcUser.depo) {
+    return message.reply(`Yeterli BTC'n yok! Deponda: ${formatBtc(btcUser.depo)}`);
+  }
 
-  updateBalance(message.author.id, -amount); // bahis baştan alınır, kazanınca iade + kâr verilir
+  btcUser.depo -= betBtc; // bahis baştan alınır, kazanınca iade + kâr verilir
+  saveBtc();
 
   const bombPositions = new Set();
   while (bombPositions.size < bombCount) {
@@ -246,7 +294,7 @@ async function kripto(message, args) {
       .setColor(colors[state])
       .setTitle(titles[state])
       .setDescription(
-        `Bahis: ${formatMoney(amount)} · Bomba: **${bombCount}**\n` +
+        `Bahis: ${formatBtc(betBtc)} · Bomba: **${bombCount}**\n` +
         `Açılan güvenli kutu: **${revealedCount}**\n` +
         `Güncel çarpan: **${currentMultiplier().toFixed(2)}x**` +
         (extra ? `\n\n${extra}` : "")
@@ -268,12 +316,14 @@ async function kripto(message, args) {
       resolved = true;
       collector.stop("done");
 
-      const payout = Math.floor(amount * currentMultiplier());
-      updateBalance(message.author.id, payout);
+      const payout = betBtc * currentMultiplier();
+      const u = getBtcUser(message.author.id);
+      u.depo += payout;
+      saveBtc();
 
       const embed = buildEmbed(
         "cashed",
-        `✅ **${currentMultiplier().toFixed(2)}x**'te çektin!\nKazanç: **+${formatMoney(payout)}**\nGüncel bakiye: **${getUser(message.author.id).balance.toLocaleString("tr-TR")}**`
+        `✅ **${currentMultiplier().toFixed(2)}x**'te çektin!\nKazanç: **+${formatBtc(payout)}**\nGüncel depo: **${formatBtc(u.depo)}**`
       );
       return i.update({ embeds: [embed], components: buildRows(true) });
     }
@@ -286,7 +336,7 @@ async function kripto(message, args) {
     if (bombPositions.has(idx)) {
       resolved = true;
       collector.stop("done");
-      const embed = buildEmbed("boom", `💣 Rug pull'a bastın! Bahsin tamamen gitti: **-${formatMoney(amount)}**`);
+      const embed = buildEmbed("boom", `💣 Rug pull'a bastın! Bahsin tamamen gitti: **-${formatBtc(betBtc)}**`);
       return i.update({ embeds: [embed], components: buildRows(true) });
     }
 
@@ -296,11 +346,13 @@ async function kripto(message, args) {
       // Tüm güvenli kutular açıldı, otomatik çek
       resolved = true;
       collector.stop("done");
-      const payout = Math.floor(amount * currentMultiplier());
-      updateBalance(message.author.id, payout);
+      const payout = betBtc * currentMultiplier();
+      const u = getBtcUser(message.author.id);
+      u.depo += payout;
+      saveBtc();
       const embed = buildEmbed(
         "cashed",
-        `🏆 Tüm güvenli kutuları buldun!\nKazanç: **+${formatMoney(payout)}**\nGüncel bakiye: **${getUser(message.author.id).balance.toLocaleString("tr-TR")}**`
+        `🏆 Tüm güvenli kutuları buldun!\nKazanç: **+${formatBtc(payout)}**\nGüncel depo: **${formatBtc(u.depo)}**`
       );
       return i.update({ embeds: [embed], components: buildRows(true) });
     }
