@@ -61,10 +61,11 @@ const TICK_MS = 900;
 
 // Basit, hafif "house edge"li exponential dağılım.
 // Çoğunlukla düşük/orta çarpanlarda patlar, nadiren çok yükseğe çıkar.
+// Not: ~%2 ihtimalle patlama noktası 1.00x'e denk gelir (oyun anında biter) —
+// gerçek crash oyunlarında da bulunan, house edge'den kaynaklanan normal bir durumdur.
 function generateCrashPoint() {
-  const houseEdge = 0.96;
+  const houseEdge = 0.98;
   const r = Math.random();
-  if (r <= 0.0001) return 1.0;
   let crash = houseEdge / (1 - r);
   return Math.max(1.0, Math.min(crash, 1000));
 }
