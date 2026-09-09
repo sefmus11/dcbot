@@ -11,6 +11,7 @@ const { getGuildSettings, updateGuildSettings } = require("./storage");
 const { commands: economyCommands, startLotteryScheduler } = require("./economy");
 const { commands: huntCommands } = require("./hunt");
 const { commands: bitcoinCommands, startPriceUpdater } = require("./bitcoin");
+const { commands: cryptoGameCommands } = require("./crypto-games");
 
 const client = new Client({
   intents: [
@@ -136,6 +137,7 @@ const commands = {
           value: [
             `\`${p}para [@kullanıcı]\` — Bakiye gösterir`,
             `\`${p}daily\` — Günlük ödül alır`,
+            `\`${p}ver @kullanıcı <miktar>\` — Başkasına para gönderir`,
             `\`${p}coinflip <miktar> <yazi/tura>\` — Yazı tura`,
             `\`${p}zar <miktar> <tek/cift/1-6>\` — Zar oyunu`,
             `\`${p}slot <miktar>\` — Slot makinesi`,
@@ -165,6 +167,13 @@ const commands = {
             `\`${p}btcfiyat\` — Güncel BTC kurunu gösterir`,
             `\`${p}btcal <miktar|hepsi>\` — Para ile BTC alır`,
             `\`${p}btcsat <miktar|hepsi>\` — BTC satar`,
+          ].join("\n"),
+        },
+        {
+          name: "🎰 Kripto Kumar (Yüksek Risk)",
+          value: [
+            `\`${p}zeplin <miktar> <kaldıraç>\` — Çarpan yükselir, istediğin an çek! Kaldıraçla ⚠️ **BORÇLANABİLİRSİN**`,
+            `\`${p}kripto <miktar> <bomba>\` — Maden tarlasında rug pull'lardan kaç, çarpanı büyüt`,
           ].join("\n"),
         }
       );
@@ -401,7 +410,7 @@ const commands = {
       updateGuildSettings(message.guild.id, {
         aiHistory: { ...(settings.aiHistory || {}), [message.author.id]: newHistory },
       });
-      await message.reply(`🤖 **Novera AI:** ${answer}`);
+      await message.reply(`${answer}`);
     } catch (err) {
       console.error("Gemini hatası:", err);
       await message.reply(`❌ Hata oluştu: ${err.message}`);
@@ -437,6 +446,8 @@ Object.assign(commands, economyCommands);
 Object.assign(commands, huntCommands);
 // Madenci, btcfiyat, btcal, btcsat komutlarını ekliyor.
 Object.assign(commands, bitcoinCommands);
+// Zeplin ve kripto (mines) komutlarını ekliyor.
+Object.assign(commands, cryptoGameCommands);
 
 // ---------- olaylar ----------
 
