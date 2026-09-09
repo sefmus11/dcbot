@@ -8,9 +8,9 @@ const {
   ActivityType,
 } = require("discord.js");
 const { getGuildSettings, updateGuildSettings } = require("./storage");
-const { commands: economyCommands, startLotteryScheduler } = require("./economy");
+const { commands: economyCommands, startLotteryScheduler, getUser, updateBalance, formatMoney } = require("./economy");
 const { commands: huntCommands } = require("./hunt");
-const { commands: bitcoinCommands, startPriceUpdater } = require("./bitcoin");
+const { commands: bitcoinCommands, startPriceUpdater, getBtcUser, saveBtc } = require("./bitcoin");
 const { commands: cryptoGameCommands } = require("./crypto-games");
 
 const client = new Client({
@@ -98,6 +98,7 @@ const commands = {
             `\`${p}menu\` — Bu menüyü gösterir`,
             `\`${p}prefix <yeni>\` — Sunucu prefix'ini değiştirir`,
             `\`${p}durum <metin>\` — Botun aktivite durumunu değiştirir`,
+            `\`${p}ekle <para|btc> <miktar> [@kullanıcı]\` — Admin: Para/BTC ekler`,
           ].join("\n"),
         },
         {
@@ -438,6 +439,33 @@ const commands = {
     if (!text) return message.reply("Kullanım: `durum <yeni durum metni>`");
     client.user.setActivity(text, { type: ActivityType.Watching });
     await message.reply(`✅ Bot durumu güncellendi: "${text}" (tüm sunucularda geçerli, botun tekli bir durumu vardır)`);
+  },
+
+  // Admin/test komutu: kendine ya da başkasına Para veya BTC verir.
+  // Kullanım: ekle para 100000 [@kullanıcı] | ekle btc 0.5 [@kullanıcı]
+  async ekle(message, args) {
+    if (!hasPerm(message.member, PermissionsBitField.Flags.ManageGuild)) {
+      return message.reply("Bu komutu kullanmak için **Sunucuyu Yönet** yetkin olmalı.");
+    }
+
+    const type = (args[0] || "").toLowerCase();
+    const amount = parseFloat((args[1] || "").replace(/\./g, "").replace(/,/g, ""));
+    const target = message.mentions.users.first() || message.author;
+
+    if (!["para", "btc"].includes(type) || !amount || amount <= 0) {
+      return message.reply("Kullanım: `ekle para <miktar> [@kullanıcı]` veya `ekle btc <miktar> [@kullanıcı]`");
+    }
+
+    if (type === "para") {
+      updateBalance(target.id, amount);
+      const newBalance = getUser(target.id).balance;
+      return message.reply(`✅ <@${target.id}> kullanıcısına **${formatMoney(amount)}** eklendi. Güncel bakiye: **${newBalance.toLocaleString("tr-TR")}**`);
+    }
+
+    const btcUser = getBtcUser(target.id);
+    btcUser.depo += amount;
+    saveBtc();
+    return message.reply(`✅ <@${target.id}> kullanıcısına **${amount.toFixed(6)} BTC** eklendi. Güncel depo: **${btcUser.depo.toFixed(6)} BTC**`);
   },
 };
 
