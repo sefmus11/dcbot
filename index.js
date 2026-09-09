@@ -10,6 +10,7 @@ const {
 const { getGuildSettings, updateGuildSettings } = require("./storage");
 const { commands: economyCommands, startLotteryScheduler } = require("./economy");
 const { commands: huntCommands } = require("./hunt");
+const { commands: bitcoinCommands, startPriceUpdater } = require("./bitcoin");
 
 const client = new Client({
   intents: [
@@ -153,6 +154,17 @@ const commands = {
             `\`${p}envanter\` — Gem/kasalarını gösterir`,
             `\`${p}gemtak <gem>\` — Gem takar`,
             `\`${p}kasaac <adet>\` — Kasa açar`,
+          ].join("\n"),
+        },
+        {
+          name: "₿ Bitcoin",
+          value: [
+            `\`${p}madenci\` — Madencilerini ve deponu gösterir`,
+            `\`${p}madenci al <tip> <adet>\` — Madenci satın alır`,
+            `\`${p}madenci topla\` — Üretilen BTC'yi toplar`,
+            `\`${p}btcfiyat\` — Güncel BTC kurunu gösterir`,
+            `\`${p}btcal <miktar|hepsi>\` — Para ile BTC alır`,
+            `\`${p}btcsat <miktar|hepsi>\` — BTC satar`,
           ].join("\n"),
         }
       );
@@ -423,6 +435,8 @@ const commands = {
 Object.assign(commands, economyCommands);
 // Avla, hayvanlarim, sat, market, satinal, envanter, gemtak, gemcikar, kasaac komutlarını ekliyor.
 Object.assign(commands, huntCommands);
+// Madenci, btcfiyat, btcal, btcsat komutlarını ekliyor.
+Object.assign(commands, bitcoinCommands);
 
 // ---------- olaylar ----------
 
@@ -433,6 +447,7 @@ client.once("ready", () => {
     status: "online",
   });
   startLotteryScheduler(client);
+  startPriceUpdater(client);
 });
 
 client.on("messageCreate", async (message) => {
